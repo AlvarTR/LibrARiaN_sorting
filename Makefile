@@ -8,5 +8,5 @@ MAKEFILE_DIR:=$(dir $(realpath $(lastword ${MAKEFILE_LIST})))
 pip_install: | .venv
 	bash -c "source ${MAKEFILE_DIR}.venv/bin/activate && pip install -r ${MAKEFILE_DIR}requirements.txt"
 
-run: | .venv
-	bash -c "source ${MAKEFILE_DIR}.venv/bin/activate && python ${MAKEFILE_DIR}src/with_sorting.py"
+no_magic_sim: | .venv
+	bash -c "source ${MAKEFILE_DIR}.venv/bin/activate && python ${MAKEFILE_DIR}src/no_magic.py"
