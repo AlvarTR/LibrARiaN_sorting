@@ -1,12 +1,12 @@
 
 # Built-in
-from queue import SimpleQueue
 from typing import List, Dict, Tuple, Set
 from random import seed, shuffle
 from heapq import heappush, heappop
 from functools import reduce
 from logging import Logger
 from datetime import datetime
+from math import log
 
 logger = Logger("LibrARiaN")
 
@@ -44,47 +44,41 @@ CONSECUTIVE_SECTIONS_DICT: Dict[int, Set[int]] = {
     29: {10,11,12,13,24,25,26,27,28,30},
     30: {10,12,13,24,25,26,27,28,29},
 }
-HAND_CAPACITY = 15
+HAND_CAPACITY: int = 15
 
-PICK_BOOK_S: int = 1
-BETWEEN_CONSECUTIVE_S: int = 3
-FINAL_STORAGE_S: int = 1
+PICK_BOOK_S = 0.3
+BETWEEN_CONSECUTIVE_S = 3.0
+FINAL_STORAGE_S = 1.0
 
 BITS_OF_VOLUME_NUM = 3
-BITS_OF_VOLUME_SERIES = 7
+BITS_OF_VOLUME_SERIES = 4
+BITS_OF_THEMES = 5
 TOTAL_OF_THEMES = len(CONSECUTIVE_SECTIONS_DICT)
-TOTAL_OF_BOOKS = TOTAL_OF_THEMES * 2**(BITS_OF_VOLUME_SERIES +
+TOTAL_OF_BOOKS: int = TOTAL_OF_THEMES * 2**(BITS_OF_VOLUME_SERIES +
                                        BITS_OF_VOLUME_NUM)
 
-SEED = 1
+SEED: int = 1
 
 # Functions
-def floor_books_init(seed_number: int) -> SimpleQueue[int]:
+def floor_books_init(seed_number: int) -> List[int]:
     seed(seed_number)
     logger.warning("Creating list of books")
-    random_books = list(range(TOTAL_OF_BOOKS))
+    floor_books = list(range(TOTAL_OF_BOOKS))
     logger.warning("Shuffling...")
     before_shuffle = datetime.now()
-    shuffle(random_books)
+    shuffle(floor_books)
     logger.warning(f"Shuffling took {datetime.now() - before_shuffle}")
-    logger.warning("Flooring books...")
-    floor_books = SimpleQueue()
-    before_flooring = datetime.now()
-    for book in random_books:
-        floor_books.put(book)
-    del random_books
-    logger.warning(f"Flooring took {datetime.now() - before_flooring}")
     return floor_books
 
-def radix_once(buckets: int, bit_offset: int, books: SimpleQueue[int]) -> Tuple[List[SimpleQueue[int]], int]:
-    book_pile_list = [SimpleQueue() for _ in range(buckets)]
+def radix_once(buckets: int, bit_offset: int, books: List[int]) -> Tuple[List[List[int]], int]:
+    book_pile_list = [[] for i in range(buckets)]
     piling_seconds = 0
     hands = []
     current_section = 0
     while not books.empty():
-        while len(hands) < 15 and not books.empty():
+        while len(hands) < HAND_CAPACITY and not books.empty():
             piling_seconds += PICK_BOOK_S
-            heappush(hands, books.get())
+            heappush(hands, books.pop())
         logger.debug(f"Got {len(hands)} books.")
         while hands:
             book = heappop(hands)
@@ -97,7 +91,7 @@ def radix_once(buckets: int, bit_offset: int, books: SimpleQueue[int]) -> Tuple[
                     next_section_options |= reduce(Set.union, (CONSECUTIVE_SECTIONS_DICT.get(next_section, set()) 
                                                                 for next_section in next_section_options))
 
-            book_pile_list[section].put(book)
+            book_pile_list[section].append(book)
         logger.debug(f"Hands empty.")
             
     return (book_pile_list, piling_seconds)
@@ -110,12 +104,12 @@ def queue_iter(queue: SimpleQueue):
 def main():
     floor_books = floor_books_init(SEED)
         
-    sorted_queues, recorded_time = radix_once(2, 14, floor_books)
+    sorted_queues, recorded_time = radix_once(2, int(log(TOTAL_OF_BOOKS-1, 2)), floor_books)
     print(f"{recorded_time=}s == {recorded_time/3600.0}h")
     
     for queue in sorted_queues:
         print(queue)
-        more_sorted_queues, aux_recorded_time = radix_once(TOTAL_OF_BOOKS, BITS_OF_VOLUME_SERIES + BITS_OF_VOLUME_NUM, queue)
+        more_sorted_queues, aux_recorded_time = radix_once(TOTAL_OF_THEMES, BITS_OF_VOLUME_SERIES + BITS_OF_VOLUME_NUM, queue)
         recorded_time += aux_recorded_time
         print(f"{recorded_time=}s == {recorded_time/3600.0}h")
 
